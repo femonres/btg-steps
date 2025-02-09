@@ -1,0 +1,30 @@
+service: confirmation-operations-resources
+useDotenv: true
+
+custom:
+  stage: ${opt:stage, 'local'}
+  localstack:
+    debug: true
+    stages:
+      - local
+      - dev
+    host: http://localhost
+    edgePort: 4566
+    autostart: true
+
+provider:
+  name: aws
+  runtime: python3.8
+  region: us-east-1
+  endpointType: REGIONAL
+  profile: local
+  stage: ${opt:stage, 'dev'}
+  
+plugins:
+  - serverless-offline
+  - serverless-localstack
+
+resources:
+  - ${file(sns-sqs.yml)}
+  - ${file(s3.yml)}
+  - ${file(secrets.yml)}

@@ -1,0 +1,34 @@
+Resources:
+  ProcesamientoBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: ${self:service}-${self:provider.stage}-procesamiento-bucket
+      AccessControl: Private
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldFiles
+            Status: Enabled
+            ExpirationInDays: 30  # Eliminar archivos después de 30 días
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ProcesamientoBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: s3:PutObject
+            Resource: !Sub "arn:aws:s3:::${ProcesamientoBucket}/*"
+
+Outputs:
+  ProcesamientoBucketArn:
+    Description: "ARN del bucket de procesamiento"
+    Value: !GetAtt ProcesamientoBucket.Arn
+    Export:
+      Name: !Sub ${self:service}-${self:provider.stage}-ProcesamientoBucketArn
+  ProcesamientoBucketName:
+    Description: "Nombre del bucket de procesamiento"
+    Value: !Ref ProcesamientoBucket
+    Export:
+      Name: !Sub ${self:service}-${self:provider.stage}-ProcesamientoBucketName

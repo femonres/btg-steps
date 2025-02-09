@@ -1,0 +1,69 @@
+Resources:
+  ProcesamientoTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: ${self:service}-${self:provider.stage}-procesamiento-topic
+
+  InputQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: ${self:service}-${self:provider.stage}-input-queue
+      VisibilityTimeout: 300  # Tiempo de espera para reintentos (en segundos)
+
+  OutputQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: ${self:service}-${self:provider.stage}-output-queue
+
+  SnsToSqsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: sqs
+      Endpoint: !GetAtt InputQueue.Arn
+      TopicArn: !Ref ProcesamientoTopic
+
+  InputQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref InputQueue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: sqs:SendMessage
+            Resource: !GetAtt InputQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref ProcesamientoTopic
+
+Outputs:
+  ProcesamientoTopicArn:
+    Description: "ARN del tópico de procesamiento"
+    Value: !Ref ProcesamientoTopic
+    Export:
+      Name: !Sub ${self:service}-${self:provider.stage}-ProcesamientoTopicArn
+
+  InputQueueUrl:
+    Description: "URL de la cola de entrada"
+    Value: !GetAtt InputQueue.QueueUrl
+    Export:
+      Name: !Sub ${self:service}-${self:provider.stage}-InputQueueUrl
+
+  InputQueueArn:
+    Description: "ARN de la cola de entrada"
+    Value: !GetAtt InputQueue.Arn
+    Export:
+      Name: !Sub ${self:service}-${self:provider.stage}-InputQueueArn
+
+  OutputQueueUrl:
+    Description: "URL de la cola de salida"
+    Value: !GetAtt OutputQueue.QueueUrl
+    Export:
+      Name: !Sub ${self:service}-${self:provider.stage}-OutputQueueUrl
+
+  OutputQueueArn:
+    Description: "ARN de la cola de salida"
+    Value: !GetAtt OutputQueue.Arn
+    Export:
+      Name: !Sub ${self:service}-${self:provider.stage}-OutputQueueArn

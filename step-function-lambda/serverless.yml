@@ -1,0 +1,144 @@
+service: confirmation-operations
+useDotenv: true
+
+custom:
+  stage: ${opt:stage, 'local'}
+  resourcesBaseName: ${self:service}-resources-${self:provider.stage}
+  localstack:
+    debug: true
+    stages:
+      - local
+      - dev
+    host: http://localhost
+    edgePort: 4566
+    autostart: true
+    lambda:
+      mountCode: true
+  pythonRequirements:
+    dockerizePip: true
+    layer: true
+    strip: false
+    slim: true
+
+provider:
+  name: aws
+  runtime: python3.11
+  region: us-east-1
+  endpointType: REGIONAL
+  profile: local
+  stage: ${opt:stage, 'dev'}
+  environment:
+    REGION_NAME: ${self:provider.region}
+    SECRET_NAME: ${cf:${self:custom.resourcesBaseName}.DatabaseSecretArn}
+    BUCKET_NAME: ${cf:${self:custom.resourcesBaseName}.ProcesamientoBucketName}
+    QUEUE_NAME: ${cf:${self:custom.resourcesBaseName}.OutputQueueUrl}
+
+plugins:
+  - serverless-offline
+  - serverless-python-requirements
+  - serverless-step-functions
+  - serverless-localstack
+
+package: 
+  individually: true
+  patterns:
+    - '!**'
+
+functions:
+  TriggerStepFunction:
+    handler: src/functions/trigger_step_function.handler
+    events:
+      - sqs:
+          arn: ${cf:${self:custom.resourcesBaseName}.InputQueueArn}
+          batchSize: 1
+    package:
+      include:
+        - src/functions/trigger_step_function.py
+        - src/utils/logger.py
+  ValidarCliente:
+    handler: src/functions/validar_cliente.handler
+    environment:
+      SECRET_NAME: ${cf:${self:custom.resourcesBaseName}.DatabaseSecretArn}
+    package:
+      include:
+        - src/functions/validar_cliente.py
+        - src/services/**
+        - src/utils/**
+  ValidarFechas:
+    handler: src/functions/validar_fechas.handler
+    package:
+      include:
+        - src/functions/validar_fechas.py
+        - src/utils/**
+  GenerarXML:
+    handler: src/functions/generar_xml.handler
+    environment:
+      BUCKET_NAME: ${cf:${self:custom.resourcesBaseName}.ProcesamientoBucketName}
+    package:
+      include:
+        - src/functions/generar_xml.py
+        - src/services/**
+        - src/utils/**
+  EnviarResultado:
+    handler: src/functions/enviar_resultado.handler
+    environment:
+      OUTPUT_QUEUE_URL: ${cf:${self:custom.resourcesBaseName}.OutputQueueUrl}
+    package:
+      include:
+        - src/functions/enviar_resultado.py
+        - src/utils/**
+  EnviarCorreo:
+    handler: src/functions/enviar_correo.handler
+    package:
+      include:
+        - src/functions/enviar_correo.py
+        - src/utils/**
+  CopiarSFTP:
+    handler: src/functions/copiar_sftp.handler
+    package:
+      include:
+        - src/functions/copiar_sftp.py
+        - src/utils/**
+
+stepFunctions:
+  stateMachines:
+    ProcesamientoStateMachine:
+      name: ${self:service}-${self:provider.stage}-procesamiento-state-machine
+      definition:
+        Comment: Flujo de procesamiento de mensajes
+        StartAt: ValidarCliente
+        States:
+          ValidarCliente:
+            Type: Task
+            Resource: !GetAtt ValidarCliente.Arn
+            Next: ValidarFechas
+          ValidarFechas:
+            Type: Task
+            Resource: !GetAtt ValidarFechas.Arn
+            Next: ValidarMoneda
+          GenerarXML:
+            Type: Task
+            Resource: !GetAtt GenerarXML.Arn
+            Next: ProcesarResultados
+          ProcesarResultados:
+            Type: Parallel
+            Branches:
+              - StartAt: EnviarResultado
+                States:
+                  EnviarResultado:
+                    Type: Task
+                    Resource: !GetAtt EnviarResultado.Arn
+                    End: true
+              - StartAt: EnviarCorreo
+                States:
+                  EnviarCorreo:
+                    Type: Task
+                    Resource: !GetAtt EnviarCorreo.Arn
+                    End: true
+              - StartAt: CopiarSFTP
+                States:
+                  CopiarSFTP:
+                    Type: Task
+                    Resource: !GetAtt CopiarSFTP.Arn
+                    End: true
+            End: true
