@@ -1,6 +1,7 @@
 import json
 
-from src.utils import logger
+from src.utils.logger import logger
+
 
 def handler(event, context):
     logger.info(f"EnviarCorreo.handler - Event incoming: {event}")

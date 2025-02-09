@@ -1,6 +1,6 @@
 import json
 
-from src.utils import logger
+from src.utils.logger import logger
 from src.utils.config import settings
 from src.services.database import Database
 
@@ -8,7 +8,7 @@ def handler(event, context):
     logger.info(f"ValidarCliente.handler - Event incoming: {event}")
     # Obtener el mensaje JSON
     try:
-        message = json.loads(event['Records'][0]['body'])
+        message = json.loads(event['Message'])
         client_id = message['client_id']
         logger.info(f"ValidarCliente.handler - client_id: {client_id}")
     except Exception as e:

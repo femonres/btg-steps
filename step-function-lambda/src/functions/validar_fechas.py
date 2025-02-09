@@ -1,12 +1,12 @@
 import json
 
-from src.utils import logger
+from src.utils.logger import logger
 
 
 def handler(event, context):
     logger.info(f"ValidarFechas.handler - Event incoming: {event}")
     # Obtener el mensaje JSON
-    message = json.loads(event['Records'][0]['body'])
+    message = json.loads(event['Message'])
     client_id = message['client_id']
     logger.info(f"ValidarFechas.handler - client_id: {client_id}")
 

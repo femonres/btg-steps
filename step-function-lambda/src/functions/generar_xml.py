@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-from src.utils import logger
+from src.utils.logger import logger
 from src.utils.config import settings
 from src.services.bucket_s3 import BucketS3Client
 
@@ -10,7 +10,7 @@ def handler(event, context):
     logger.info(f"GenerarXml.handler - Event incoming: {event}")
     # Obtener el mensaje JSON
     try:
-        message = json.loads(event['Records'][0]['body'])
+        message = json.loads(event['Message'])
         client_id = message['client_id']
         fecha_procesamiento = message["fecha_procesamiento"]
         logger.info(f"GenerarXml.handler - client_id: {client_id}")

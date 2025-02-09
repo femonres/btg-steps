@@ -2,7 +2,7 @@ import os
 import json
 import boto3
 
-from src.utils import logger
+from src.utils.logger import logger
 
 
 # Cliente de Step Functions

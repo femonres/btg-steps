@@ -1,9 +1,9 @@
 import json
 
-from src.utils import logger
+from src.utils.logger import logger
 
 
-def lambda_handler(event, context):
+def handler(event, context):
     logger.info(f"CopiarSFTP.handler - Event incoming: {event}")
 
     # Detalles del archivo desde el evento S3

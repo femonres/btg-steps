@@ -39,66 +39,66 @@ plugins:
   - serverless-step-functions
   - serverless-localstack
 
-package: 
+package:
   individually: true
-  patterns:
-    - '!**'
 
 functions:
   TriggerStepFunction:
     handler: src/functions/trigger_step_function.handler
+    environment:
+      STEP_FUNCTION_ARN: arn:aws:states:${self:provider.region}:${aws:accountId}:stateMachine:${self:service}-${self:provider.stage}-procesamiento-state-machine
     events:
       - sqs:
           arn: ${cf:${self:custom.resourcesBaseName}.InputQueueArn}
           batchSize: 1
     package:
       include:
-        - src/functions/trigger_step_function.py
         - src/utils/logger.py
+        - src/functions/trigger_step_function.py
   ValidarCliente:
     handler: src/functions/validar_cliente.handler
     environment:
       SECRET_NAME: ${cf:${self:custom.resourcesBaseName}.DatabaseSecretArn}
     package:
       include:
-        - src/functions/validar_cliente.py
-        - src/services/**
         - src/utils/**
+        - src/services/**
+        - src/functions/validar_cliente.py
   ValidarFechas:
     handler: src/functions/validar_fechas.handler
     package:
       include:
-        - src/functions/validar_fechas.py
         - src/utils/**
+        - src/functions/validar_fechas.py
   GenerarXML:
     handler: src/functions/generar_xml.handler
     environment:
       BUCKET_NAME: ${cf:${self:custom.resourcesBaseName}.ProcesamientoBucketName}
     package:
       include:
-        - src/functions/generar_xml.py
-        - src/services/**
         - src/utils/**
+        - src/services/**
+        - src/functions/generar_xml.py
   EnviarResultado:
     handler: src/functions/enviar_resultado.handler
     environment:
       OUTPUT_QUEUE_URL: ${cf:${self:custom.resourcesBaseName}.OutputQueueUrl}
     package:
       include:
+        - src/utils/logger.py
         - src/functions/enviar_resultado.py
-        - src/utils/**
   EnviarCorreo:
     handler: src/functions/enviar_correo.handler
     package:
       include:
+        - src/utils/logger.py
         - src/functions/enviar_correo.py
-        - src/utils/**
   CopiarSFTP:
     handler: src/functions/copiar_sftp.handler
     package:
       include:
-        - src/functions/copiar_sftp.py
         - src/utils/**
+        - src/functions/copiar_sftp.py
 
 stepFunctions:
   stateMachines:

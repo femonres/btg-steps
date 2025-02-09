@@ -1,22 +1,18 @@
 import os
 import json
 import boto3
-import psycopg2
 from botocore.exceptions import ClientError
+
+from src.utils.logger import logger
+
 
 class Database:
     def __init__(self, secret_name):
         self.secret_name = secret_name
-        self.connection = None
 
     def connect(self):
         secret = self._get_secret()
-        self.connection = psycopg2.connect(
-            host=secret["host"],
-            database=secret["dbname"],
-            user=secret["username"],
-            password=secret["password"]
-        )
+        logger.info(f"Los datos obtenidos son: {secret}")
 
     def _get_secret(self):
         client = boto3.client("secretsmanager")
@@ -27,10 +23,7 @@ class Database:
             raise e
 
     def query(self, sql, params=None):
-        cursor = self.connection.cursor()
-        cursor.execute(sql, params or ())
-        return cursor.fetchall()
+        return []
 
     def disconnect(self):
-        if self.connection:
-            self.connection.close()
+        pass
