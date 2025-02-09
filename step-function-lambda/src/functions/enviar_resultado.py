@@ -4,7 +4,7 @@ from src.utils.logger import logger
 
 
 def handler(event, context):
-    logger.info(f"EnviarResultado.handler - Event incoming: {event}")
+    logger.info(f"Event incoming: {event}")
 
     return {
         'statusCode': 200,

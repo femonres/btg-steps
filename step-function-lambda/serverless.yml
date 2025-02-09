@@ -70,6 +70,12 @@ functions:
       include:
         - src/utils/**
         - src/functions/validar_fechas.py
+  ValidarMoneda:
+    handler: src/functions/validar_moneda.handler
+    package:
+      include:
+        - src/utils/logger.py
+        - src/functions/validar_moneda.py
   GenerarXML:
     handler: src/functions/generar_xml.handler
     environment:
@@ -112,14 +118,30 @@ stepFunctions:
             Type: Task
             Resource: !GetAtt ValidarCliente.Arn
             Next: ValidarFechas
+            Catch:
+              - ErrorEquals: ["States.ALL"]
+                Next: ManejarError
           ValidarFechas:
             Type: Task
             Resource: !GetAtt ValidarFechas.Arn
             Next: ValidarMoneda
+            Catch:
+              - ErrorEquals: ["States.ALL"]
+                Next: ManejarError
+          ValidarMoneda:
+            Type: Task
+            Resource: !GetAtt ValidarMoneda.Arn
+            Next: GenerarXML
+            Catch:
+              - ErrorEquals: ["States.ALL"]
+                Next: ManejarError
           GenerarXML:
             Type: Task
             Resource: !GetAtt GenerarXML.Arn
             Next: ProcesarResultados
+            Catch:
+              - ErrorEquals: ["States.ALL"]
+                Next: ManejarError
           ProcesarResultados:
             Type: Parallel
             Branches:
@@ -141,4 +163,10 @@ stepFunctions:
                     Type: Task
                     Resource: !GetAtt CopiarSFTP.Arn
                     End: true
-            End: true
+            Catch:
+              - ErrorEquals: ["States.ALL"]
+                Next: ManejarError
+          ManejarError:
+            Type: Fail
+            Cause: "Error no controlado en el flujo de procesamiento."
+            Error: "ErrorDesconocido"

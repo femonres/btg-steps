@@ -6,6 +6,7 @@ def handler(event, context):
     logger.info(f"ValidarMoneda.handler - Event incoming: {event}")
 
     return {
-        'statusCode': 200,
-        'body': json.dumps({'status': 'Success'})
+        'statusCode': event['statusCode'],
+        'errors': event['errors'] if 'errors' in event else json.dumps([]),
+        'Message': event['Message'],
     }

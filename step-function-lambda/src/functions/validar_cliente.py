@@ -5,17 +5,17 @@ from src.utils.config import settings
 from src.services.database import Database
 
 def handler(event, context):
-    logger.info(f"ValidarCliente.handler - Event incoming: {event}")
+    logger.info(f"Event incoming: {event}")
     # Obtener el mensaje JSON
     try:
         message = json.loads(event['Message'])
         client_id = message['client_id']
-        logger.info(f"ValidarCliente.handler - client_id: {client_id}")
+        logger.info(f"client_id: {client_id}")
     except Exception as e:
-        logger.error(f"ValidarCliente.handler - Error al obtener el mensaje: {e}")
+        logger.error(f"Error al obtener el mensaje: {e}")
         return {
             'statusCode': 400,
-            'body': json.dumps({'ErrorCode': 'INVALID_JSON', 'description': 'Error al obtener el mensaje'})
+            'detail': json.dumps({'ErrorCode': 'INVALID_JSON', 'description': 'Error al obtener el mensaje'})
         }
 
     # Conectar a la base de datos
@@ -26,19 +26,23 @@ def handler(event, context):
         db.connect()
         cliente = db.query("SELECT * FROM tbl_clientes WHERE id = %s", (client_id,))
         if not cliente:
-            logger.error(f"ValidarCliente.handler - Cliente no encontrado: {client_id}")
-            return {"statusCode": 404, "body": "Cliente no encontrado"}
+            logger.error(f"Cliente no encontrado: {client_id}")
+            return {
+                "statusCode": 404,
+                "errors": json.dumps([{'ErrorCode': 'BUSINES_VALIDATIONS', 'description': 'Cliente no encontrado'}]),
+                "Message": event['Message']
+            }
     except Exception as e:
-        logger.error(f"ValidarCliente.handler - Error al validar el cliente: {e}")
+        logger.error(f"Error al validar el cliente: {e}")
         return {
             'statusCode': 500,
-            'body': json.dumps({'ErrorCode': 'INTERNAL_ERROR', 'description': 'Error interno'})
+            'detail': json.dumps({'ErrorCode': 'INTERNAL_ERROR', 'description': 'Error interno'})
         }
     finally:
         db.disconnect()
 
-    logger.info(f"ValidarCliente.handler - Cliente encontrado: {client_id}")
+    logger.info(f"Cliente encontrado: {client_id}")
     return {
         'statusCode': 200,
-        'body': json.dumps({'status': 'Success'})
+        'Message': event['Message']
     }
