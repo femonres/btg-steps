@@ -30,6 +30,7 @@ provider:
   environment:
     REGION_NAME: ${self:provider.region}
     SECRET_NAME: ${cf:${self:custom.resourcesBaseName}.DatabaseSecretArn}
+    SFTP_SERVER_SECRET: ${cf:${self:custom.resourcesBaseName}.SftpServerSecretArn}
     BUCKET_NAME: ${cf:${self:custom.resourcesBaseName}.ProcesamientoBucketName}
     QUEUE_NAME: ${cf:${self:custom.resourcesBaseName}.OutputQueueUrl}
 
@@ -101,9 +102,13 @@ functions:
         - src/functions/enviar_correo.py
   CopiarSFTP:
     handler: src/functions/copiar_sftp.handler
+    environment:
+      BUCKET_NAME: ${cf:${self:custom.resourcesBaseName}.ProcesamientoBucketName}
+      SFTP_SERVER_SECRET: ${cf:${self:custom.resourcesBaseName}.SftpServerSecretArn}
     package:
       include:
         - src/utils/**
+        - src/services/**
         - src/functions/copiar_sftp.py
 
 stepFunctions:
@@ -163,6 +168,7 @@ stepFunctions:
                     Type: Task
                     Resource: !GetAtt CopiarSFTP.Arn
                     End: true
+            End: true
             Catch:
               - ErrorEquals: ["States.ALL"]
                 Next: ManejarError

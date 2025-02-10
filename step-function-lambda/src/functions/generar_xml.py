@@ -39,7 +39,7 @@ def handler(event, context):
             'statusCode': event['statusCode'],
             'errors': errors,
             'Message': event['Message'],
-            'body': json.dumps({'xml': xml_content})
+            'file_name': file_name
         }
     except Exception as e:
         logger.error(f"Error al subir el XML a S3: {e}")

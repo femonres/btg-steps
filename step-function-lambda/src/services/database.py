@@ -1,9 +1,5 @@
-import os
-import json
-import boto3
-from botocore.exceptions import ClientError
-
 from src.utils.logger import logger
+from src.services.secrets import get_secrets
 
 
 class Database:
@@ -11,19 +7,13 @@ class Database:
         self.secret_name = secret_name
 
     def connect(self):
-        secret = self._get_secret()
+        secret = get_secrets(self.secret_name)
         logger.info(f"Los datos obtenidos son: {secret}")
 
-    def _get_secret(self):
-        client = boto3.client("secretsmanager")
-        try:
-            response = client.get_secret_value(SecretId=self.secret_name)
-            return json.loads(response["SecretString"])
-        except ClientError as e:
-            raise e
-
     def query(self, sql, params=None):
+        logger.info(f"Query: {sql}")
+        logger.info(f"Params: {params}")
         return []
 
     def disconnect(self):
-        pass
+        logger.info("Disconnecting from database")
