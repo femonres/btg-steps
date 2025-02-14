@@ -5,27 +5,26 @@ custom:
   stage: ${opt:stage, 'local'}
   resourcesBaseName: ${self:service}-resources-${self:provider.stage}
   localstack:
-    debug: true
     stages:
       - local
-      - dev
     host: http://localhost
     edgePort: 4566
     autostart: true
-    lambda:
-      mountCode: true
+  lambdaHashingVersion: 20201221
+  lambda:
+    mountCode: true
   pythonRequirements:
-    dockerizePip: true
-    layer: true
-    strip: false
+    zip: false
+    pip: true
     slim: true
+    strip: false
 
 provider:
   name: aws
   runtime: python3.11
   region: us-east-1
   endpointType: REGIONAL
-  profile: local
+  profile: ${opt:stage, 'dev'}
   stage: ${opt:stage, 'dev'}
   environment:
     REGION_NAME: ${self:provider.region}
@@ -35,7 +34,6 @@ provider:
     QUEUE_NAME: ${cf:${self:custom.resourcesBaseName}.OutputQueueUrl}
 
 plugins:
-  - serverless-offline
   - serverless-python-requirements
   - serverless-step-functions
   - serverless-localstack
@@ -58,6 +56,7 @@ functions:
         - src/functions/trigger_step_function.py
   ValidarCliente:
     handler: src/functions/validar_cliente.handler
+    role: !GetAtt ValidarClienteRole.Arn
     environment:
       SECRET_NAME: ${cf:${self:custom.resourcesBaseName}.DatabaseSecretArn}
     package:
@@ -79,6 +78,7 @@ functions:
         - src/functions/validar_moneda.py
   GenerarXML:
     handler: src/functions/generar_xml.handler
+    role: !GetAtt GenerarXMLRole.Arn
     environment:
       BUCKET_NAME: ${cf:${self:custom.resourcesBaseName}.ProcesamientoBucketName}
     package:
@@ -88,6 +88,7 @@ functions:
         - src/functions/generar_xml.py
   EnviarResultado:
     handler: src/functions/enviar_resultado.handler
+    role: !GetAtt EnviarResultadoRole.Arn
     environment:
       OUTPUT_QUEUE_URL: ${cf:${self:custom.resourcesBaseName}.OutputQueueUrl}
     package:
@@ -102,6 +103,7 @@ functions:
         - src/functions/enviar_correo.py
   CopiarSFTP:
     handler: src/functions/copiar_sftp.handler
+    role: !GetAtt GenerarXMLRole.Arn
     environment:
       BUCKET_NAME: ${cf:${self:custom.resourcesBaseName}.ProcesamientoBucketName}
       SFTP_SERVER_SECRET: ${cf:${self:custom.resourcesBaseName}.SftpServerSecretArn}
@@ -110,6 +112,99 @@ functions:
         - src/utils/**
         - src/services/**
         - src/functions/copiar_sftp.py
+
+resources:
+  Resources:
+    ValidarClienteRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: ${self:service}-${self:provider.stage}-validar-cliente-role
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: ${self:service}-${self:provider.stage}-validar-cliente-policy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - secretsmanager:GetSecretValue
+                  Resource: ${cf:${self:custom.resourcesBaseName}.DatabaseSecretArn}
+    GenerarXMLRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: ${self:service}-${self:provider.stage}-generar-xml-role
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: ${self:service}-${self:provider.stage}-generar-xml-policy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - s3:ListBucket
+                    - s3:PutObject
+                  Resource: ${cf:${self:custom.resourcesBaseName}.ProcesamientoBucketArn}
+                - Effect: Allow
+                  Action:
+                    - secretsmanager:GetSecretValue
+                  Resource: ${cf:${self:custom.resourcesBaseName}.DatabaseSecretArn}
+    EnviarResultadoRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: ${self:service}-${self:provider.stage}-enviar-resultado-role
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: ${self:service}-${self:provider.stage}-enviar-resultado-policy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - sqs:SendMessage
+                  Resource: ${cf:${self:custom.resourcesBaseName}.OutputQueueArn}
+    CopiarSFTPRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: ${self:service}-${self:provider.stage}-copiar-sftp-role
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: ${self:service}-${self:provider.stage}-copiar-sftp-policy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - s3:ListBucket
+                    - s3:GetObject
+                  Resource: ${cf:${self:custom.resourcesBaseName}.ProcesamientoBucketArn}
+                - Effect: Allow
+                  Action:
+                    - secretsmanager:GetSecretValue
+                  Resource: ${cf:${self:custom.resourcesBaseName}.SftpServerSecretArn}
 
 stepFunctions:
   stateMachines:

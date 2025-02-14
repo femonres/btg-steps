@@ -8,9 +8,9 @@ class BucketS3Client:
         self.bucket_name = bucket_name
         self.client = boto3.client("s3")
 
-    def upload(self, file_name, content):
+    def upload(self, file_name, content, content_type="text/xml"):
         logger.info(f"Uploading file {file_name} to bucket {self.bucket_name}")
-        self.client.put_object(Bucket=self.bucket_name, Key=file_name, Body=content)
+        self.client.put_object(Bucket=self.bucket_name, Key=file_name, Body=content, ContentType=content_type)
 
     def download(self, file_name, local_file_path):
         logger.info(f"Downloading file {file_name} from bucket {self.bucket_name}")

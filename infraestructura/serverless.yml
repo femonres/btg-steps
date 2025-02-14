@@ -4,24 +4,21 @@ useDotenv: true
 custom:
   stage: ${opt:stage, 'local'}
   localstack:
-    debug: true
     stages:
       - local
-      - dev
     host: http://localhost
     edgePort: 4566
     autostart: true
 
 provider:
   name: aws
-  runtime: python3.8
+  runtime: python3.11
   region: us-east-1
   endpointType: REGIONAL
-  profile: local
+  profile: ${opt:stage, 'dev'}
   stage: ${opt:stage, 'dev'}
   
 plugins:
-  - serverless-offline
   - serverless-localstack
 
 resources:

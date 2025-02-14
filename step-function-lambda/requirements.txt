@@ -1,2 +1,4 @@
 boto3==1.28.0
 paramiko==3.3.1
+cryptography==3.4.8
+bcrypt==3.2.0
